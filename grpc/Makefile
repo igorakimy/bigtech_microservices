@@ -18,3 +18,15 @@ generate-note-api:
 	--go-grpc_opt=paths=source_relative \
 	--plugin=protoc-gen-go-grpc=bin/protoc-gen-go-grpc \
 	api/note/v1/note.proto
+
+# Собрать приложение под конкретную архитектуру и ОС
+build:
+	GOOS=linux GOARCH=amd64 go build -o ./bin/ ./cmd/server/main.go
+
+# Скопировать бинарный файл приложения на сервер
+copy-binary-to-server:
+	scp ./bin/main root@5.188.50.4:
+
+docker-build-and-push:
+	docker buildx build --no-cache --platform linux/amd64 -t 5.188.50.4:5000/test-server:v0.0.1 .
+	docker push 5.188.50.4:5000/test-server:v0.0.1

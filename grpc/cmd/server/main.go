@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/brianvoe/gofakeit"
-	desc "github.com/igorakimy/bigtech_microservices/grpc/pkg/note/v1"
+	desc "github.com/igorakimy/bigtech_microservices/pkg/note/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/types/known/timestamppb"
