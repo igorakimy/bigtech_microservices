@@ -30,7 +30,7 @@ jobs:
       - name: Insecure Docker Repository
         run: |
           sudo truncate -s-2 /etc/docker/daemon.json
-          echo "{ \"insecure-registries\": [\"$REGISTRY\"]}" | sudo tee -a /etc/docker/daemon.json
+          echo ", \"insecure-registries\": [\"$REGISTRY\"]}" | sudo tee -a /etc/docker/daemon.json
           echo "DOCKER_OPTS=\"--config-file=/etc/docker/daemon.json\"" | sudo tee -a /etc/default/docker
           sudo systemctl restart docker
 
