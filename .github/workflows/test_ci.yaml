@@ -23,7 +23,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
         with:
           config-inline: |
-            [registry."$REGISTRY"]
+            [registry."5.188.50.4:5000"]
               http = true
               insecure = true
 
@@ -32,7 +32,8 @@ jobs:
           sudo truncate -s-2 /etc/docker/daemon.json
           echo ", \"insecure-registries\": [\"$REGISTRY\"]}" | sudo tee -a /etc/docker/daemon.json
           echo "DOCKER_OPTS=\"--config-file=/etc/docker/daemon.json\"" | sudo tee -a /etc/default/docker
-          sudo systemctl restart docker
+          sudo systemctl stop docker
+          sudo systemctl start docker
 
       - name: Build and Push Docker Image
         run: |
