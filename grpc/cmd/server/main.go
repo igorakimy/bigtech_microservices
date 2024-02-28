@@ -63,17 +63,20 @@ func main() {
 		log.Fatalf("failed to get postgres config: %v", err)
 	}
 
+	// Create listener
 	lis, err := net.Listen("tcp", grpcConfig.Address())
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
+	// Create database pool
 	pool, err := pgxpool.New(ctx, pgConfig.DSN())
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
 	defer pool.Close()
 
+	// Register server
 	srv := grpc.NewServer()
 	reflection.Register(srv)
 	desc.RegisterNoteV1Server(srv, &server{})
