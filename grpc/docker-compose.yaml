@@ -23,13 +23,13 @@ services:
 #    volumes:
 #      - postgres_volume_prod:/var/lib/postgresql/data
 #
-#  migrator-local:
-#    build:
-#      context: .
-#      dockerfile: migration_local.Dockerfile
-#    restart: on-failure
-#    environment:
-#      DB_HOST: pg-local
+  migrator-local:
+    build:
+      context: .
+      dockerfile: migration_local.Dockerfile
+    restart: on-failure
+    environment:
+      DB_HOST: pg-local
 #
 #  migrator-prod:
 #    build:
