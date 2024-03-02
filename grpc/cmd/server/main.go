@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"github.com/igorakimy/bigtech_microservices/internal/config"
 	"github.com/igorakimy/bigtech_microservices/internal/config/env"
-	"github.com/igorakimy/bigtech_microservices/internal/repository"
+	"github.com/igorakimy/bigtech_microservices/internal/converter"
 	nr "github.com/igorakimy/bigtech_microservices/internal/repository/note"
+	"github.com/igorakimy/bigtech_microservices/internal/service"
+	noteService "github.com/igorakimy/bigtech_microservices/internal/service/note"
 	desc "github.com/igorakimy/bigtech_microservices/pkg/note/v1"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
@@ -24,27 +27,40 @@ func init() {
 
 type server struct {
 	desc.UnimplementedNoteV1Server
-	noteRepo repository.NoteRepository
+	noteService service.NoteService
 }
 
 func (s *server) Get(ctx context.Context, req *desc.GetRequest) (*desc.GetResponse, error) {
-	note, err := s.noteRepo.Get(ctx, req.GetId())
+	note, err := s.noteService.Get(ctx, req.GetId())
+
 	if err != nil {
 		return nil, err
 	}
-	return &desc.GetResponse{Note: note}, nil
+
+	if note == nil {
+		return nil, errors.New("note not found")
+	}
+
+	return &desc.GetResponse{
+		Note: converter.ToNoteFromService(note),
+	}, nil
 }
 
-func (s *server) List(ctx context.Context, req *desc.ListRequest) (*desc.ListResponse, error) {
-	notes, err := s.noteRepo.List(ctx)
+func (s *server) List(ctx context.Context, _ *desc.ListRequest) (*desc.ListResponse, error) {
+	notes, err := s.noteService.List(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &desc.ListResponse{Notes: notes}, nil
+	return &desc.ListResponse{
+		Notes: converter.ToNotesFromService(notes),
+	}, nil
 }
 
 func (s *server) Create(ctx context.Context, req *desc.CreateRequest) (*desc.CreateResponse, error) {
-	noteID, err := s.noteRepo.Create(ctx, req.Info)
+	noteID, err := s.noteService.Create(
+		ctx,
+		converter.ToNoteInfoFromDesc(req.GetInfo()),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -52,14 +68,19 @@ func (s *server) Create(ctx context.Context, req *desc.CreateRequest) (*desc.Cre
 }
 
 func (s *server) Update(ctx context.Context, req *desc.UpdateRequest) (*emptypb.Empty, error) {
-	if err := s.noteRepo.Update(ctx, req.GetId(), req.GetInfo()); err != nil {
+	err := s.noteService.Update(
+		ctx,
+		req.GetId(),
+		converter.ToUpdateNoteInfoFromDesc(req.GetInfo()),
+	)
+	if err != nil {
 		return nil, err
 	}
 	return &emptypb.Empty{}, nil
 }
 
 func (s *server) Delete(ctx context.Context, req *desc.DeleteRequest) (*emptypb.Empty, error) {
-	if err := s.noteRepo.Delete(ctx, req.GetId()); err != nil {
+	if err := s.noteService.Delete(ctx, req.GetId()); err != nil {
 		return nil, err
 	}
 	return &emptypb.Empty{}, nil
@@ -97,11 +118,14 @@ func main() {
 	}
 	defer pool.Close()
 
+	noteRepo := nr.NewPostgresRepository(pool)
+	noteServ := noteService.NewService(noteRepo)
+
 	// Register server
 	srv := grpc.NewServer()
 	reflection.Register(srv)
 	desc.RegisterNoteV1Server(srv, &server{
-		noteRepo: nr.NewPostgresRepository(pool),
+		noteService: noteServ,
 	})
 
 	log.Printf("server listening at: %v", lis.Addr())

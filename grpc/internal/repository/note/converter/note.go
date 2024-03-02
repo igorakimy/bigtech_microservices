@@ -1,46 +1,40 @@
 package converter
 
 import (
-	"github.com/igorakimy/bigtech_microservices/internal/repository/note/model"
-	desc "github.com/igorakimy/bigtech_microservices/pkg/note/v1"
-	"google.golang.org/protobuf/types/known/timestamppb"
+	"github.com/igorakimy/bigtech_microservices/internal/model"
+	modelRepo "github.com/igorakimy/bigtech_microservices/internal/repository/note/model"
 )
 
-func ToNoteFromRepo(note *model.Note) *desc.Note {
-	var updatedAt *timestamppb.Timestamp
-	if note.UpdatedAt.Valid {
-		updatedAt = timestamppb.New(note.UpdatedAt.Time)
-	}
-
-	return &desc.Note{
-		Id:        note.ID,
+func ToNoteFromRepo(note *modelRepo.Note) *model.Note {
+	return &model.Note{
+		ID:        note.ID,
 		Info:      ToNoteInfoFromRepo(&note.Info),
-		CreatedAt: timestamppb.New(note.CreatedAt),
-		UpdatedAt: updatedAt,
+		CreatedAt: note.CreatedAt,
+		UpdatedAt: note.UpdatedAt,
 	}
 }
 
-func ToNotesFromRepo(notes []model.Note) []*desc.Note {
-	var descNotes []*desc.Note
+func ToNotesFromRepo(notes []modelRepo.Note) []model.Note {
+	var modelNotes []model.Note
 
 	for _, note := range notes {
-		n := &desc.Note{
-			Id: note.ID,
-			Info: &desc.NoteInfo{
-				Title:   note.Info.Title,
-				Content: note.Info.Body,
+		n := model.Note{
+			ID: note.ID,
+			Info: model.NoteInfo{
+				Title: note.Info.Title,
+				Body:  note.Info.Body,
 			},
 		}
 
-		descNotes = append(descNotes, n)
+		modelNotes = append(modelNotes, n)
 	}
 
-	return descNotes
+	return modelNotes
 }
 
-func ToNoteInfoFromRepo(info *model.Info) *desc.NoteInfo {
-	return &desc.NoteInfo{
-		Title:   info.Title,
-		Content: info.Body,
+func ToNoteInfoFromRepo(info *modelRepo.Info) model.NoteInfo {
+	return model.NoteInfo{
+		Title: info.Title,
+		Body:  info.Body,
 	}
 }
