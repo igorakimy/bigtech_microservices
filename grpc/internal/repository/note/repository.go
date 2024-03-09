@@ -3,11 +3,11 @@ package note
 import (
 	"context"
 	sq "github.com/Masterminds/squirrel"
+	"github.com/igorakimy/bigtech_microservices/internal/client/db"
 	"github.com/igorakimy/bigtech_microservices/internal/model"
 	"github.com/igorakimy/bigtech_microservices/internal/repository"
 	"github.com/igorakimy/bigtech_microservices/internal/repository/note/converter"
 	modelRepo "github.com/igorakimy/bigtech_microservices/internal/repository/note/model"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"time"
 )
 
@@ -22,10 +22,10 @@ const (
 )
 
 type PostgresRepository struct {
-	db *pgxpool.Pool
+	db db.Client
 }
 
-func NewPostgresRepository(db *pgxpool.Pool) repository.NoteRepository {
+func NewPostgresRepository(db db.Client) repository.NoteRepository {
 	return &PostgresRepository{db: db}
 }
 
@@ -41,9 +41,13 @@ func (r *PostgresRepository) Get(ctx context.Context, id int64) (*model.Note, er
 		return nil, err
 	}
 
+	q := db.Query{
+		Name:     "note_repository.Get",
+		QueryRaw: query,
+	}
+
 	var n modelRepo.Note
-	err = r.db.QueryRow(ctx, query, args...).
-		Scan(&n.ID, &n.Info.Title, &n.Info.Body, &n.CreatedAt, &n.UpdatedAt)
+	err = r.db.DB().ScanOneContext(ctx, &n, q, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -61,21 +65,16 @@ func (r *PostgresRepository) List(ctx context.Context) ([]model.Note, error) {
 		return nil, err
 	}
 
-	rows, err := r.db.Query(ctx, query, args...)
-	if err != nil {
-		return nil, err
+	q := db.Query{
+		Name:     "note_repository.List",
+		QueryRaw: query,
 	}
-	defer rows.Close()
 
-	var n modelRepo.Note
 	var notes []modelRepo.Note
 
-	for rows.Next() {
-		err = rows.Scan(&n.ID, &n.Info.Title, &n.Info.Body, &n.CreatedAt, &n.UpdatedAt)
-		if err != nil {
-			return nil, err
-		}
-		notes = append(notes, n)
+	err = r.db.DB().ScanAllContext(ctx, &notes, q, args...)
+	if err != nil {
+		return nil, err
 	}
 
 	return converter.ToNotesFromRepo(notes), nil
@@ -93,8 +92,13 @@ func (r *PostgresRepository) Create(ctx context.Context, info *model.NoteInfo) (
 		return 0, err
 	}
 
+	q := db.Query{
+		Name:     "note_repository.Create",
+		QueryRaw: query,
+	}
+
 	var noteID int64
-	err = r.db.QueryRow(ctx, query, args...).Scan(&noteID)
+	err = r.db.DB().ScanOneContext(ctx, &noteID, q, args...)
 	if err != nil {
 		return 0, err
 	}
@@ -115,7 +119,12 @@ func (r *PostgresRepository) Update(ctx context.Context, id int64, info *model.U
 		return err
 	}
 
-	_, err = r.db.Exec(ctx, query, args...)
+	q := db.Query{
+		Name:     "note_repository.Update",
+		QueryRaw: query,
+	}
+
+	_, err = r.db.DB().ExecContext(ctx, q, args...)
 	if err != nil {
 		return err
 	}
@@ -133,7 +142,12 @@ func (r *PostgresRepository) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	_, err = r.db.Exec(ctx, query, args...)
+	q := db.Query{
+		Name:     "note_repository.Delete",
+		QueryRaw: query,
+	}
+
+	_, err = r.db.DB().ExecContext(ctx, q, args...)
 	if err != nil {
 		return err
 	}

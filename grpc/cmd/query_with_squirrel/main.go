@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/brianvoe/gofakeit"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"log"
 	"time"
 )
@@ -18,7 +18,7 @@ func main() {
 	ctx := context.Background()
 
 	// Create pool connection to database
-	pool, err := pgxpool.New(ctx, dbDSN)
+	pool, err := pgxpool.Connect(ctx, dbDSN)
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}

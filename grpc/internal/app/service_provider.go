@@ -3,6 +3,8 @@ package app
 import (
 	"context"
 	"github.com/igorakimy/bigtech_microservices/internal/api/note"
+	"github.com/igorakimy/bigtech_microservices/internal/client/db"
+	"github.com/igorakimy/bigtech_microservices/internal/client/db/pg"
 	"github.com/igorakimy/bigtech_microservices/internal/closer"
 	"github.com/igorakimy/bigtech_microservices/internal/config"
 	"github.com/igorakimy/bigtech_microservices/internal/config/env"
@@ -10,7 +12,6 @@ import (
 	noteRepository "github.com/igorakimy/bigtech_microservices/internal/repository/note"
 	"github.com/igorakimy/bigtech_microservices/internal/service"
 	noteService "github.com/igorakimy/bigtech_microservices/internal/service/note"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"log"
 )
 
@@ -18,8 +19,8 @@ type serviceProvider struct {
 	postgresConfig config.PostgresConfig
 	grpcConfig     config.GRPCConfig
 
-	postgresPool *pgxpool.Pool
-	noteRepo     repository.NoteRepository
+	dbClient db.Client
+	noteRepo repository.NoteRepository
 
 	noteService service.NoteService
 
@@ -54,32 +55,29 @@ func (s *serviceProvider) GRPCConfig() config.GRPCConfig {
 	return s.grpcConfig
 }
 
-func (s *serviceProvider) PostgresPoolConn(ctx context.Context) *pgxpool.Pool {
-	if s.postgresPool == nil {
-		pool, err := pgxpool.New(ctx, s.PostgresConfig().DSN())
+func (s *serviceProvider) PostgresClient(ctx context.Context) db.Client {
+	if s.dbClient == nil {
+		dbClient, err := pg.New(ctx, s.PostgresConfig().DSN())
 
 		if err != nil {
 			log.Fatalf("failed to connect to database: %s", err.Error())
 		}
 
-		if err = pool.Ping(ctx); err != nil {
+		if err = dbClient.DB().Ping(ctx); err != nil {
 			log.Fatalf("ping error: %s", err.Error())
 		}
 
-		closer.Add(func() error {
-			pool.Close()
-			return nil
-		})
+		closer.Add(dbClient.Close)
 
-		s.postgresPool = pool
+		s.dbClient = dbClient
 	}
 
-	return s.postgresPool
+	return s.dbClient
 }
 
 func (s *serviceProvider) NoteRepository(ctx context.Context) repository.NoteRepository {
 	if s.noteRepo == nil {
-		s.noteRepo = noteRepository.NewPostgresRepository(s.PostgresPoolConn(ctx))
+		s.noteRepo = noteRepository.NewPostgresRepository(s.PostgresClient(ctx))
 	}
 	return s.noteRepo
 }
