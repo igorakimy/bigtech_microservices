@@ -1,16 +1,22 @@
 package note
 
 import (
+	"github.com/igorakimy/bigtech_microservices/internal/client/db"
 	"github.com/igorakimy/bigtech_microservices/internal/repository"
 	"github.com/igorakimy/bigtech_microservices/internal/service"
 )
 
 type serv struct {
-	noteRepo repository.NoteRepository
+	noteRepo  repository.NoteRepository
+	txManager db.TxManager
 }
 
-func NewService(noteRepo repository.NoteRepository) service.NoteService {
+func NewService(
+	noteRepo repository.NoteRepository,
+	txManager db.TxManager,
+) service.NoteService {
 	return &serv{
-		noteRepo: noteRepo,
+		noteRepo:  noteRepo,
+		txManager: txManager,
 	}
 }

@@ -39,5 +39,16 @@ type Pinger interface {
 type DB interface {
 	SQLExecutor
 	Pinger
+	Transactor
 	Close()
+}
+
+type Handler func(ctx context.Context) error
+
+type Transactor interface {
+	BeginTx(ctx context.Context, txOptions pgx.TxOptions) (pgx.Tx, error)
+}
+
+type TxManager interface {
+	ReadCommitted(ctx context.Context, f Handler) error
 }

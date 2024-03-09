@@ -13,6 +13,12 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
+type key string
+
+const (
+	TxKey key = "tx"
+)
+
 type pg struct {
 	dbc *pgxpool.Pool
 }
@@ -48,11 +54,21 @@ func (p *pg) ScanAllContext(ctx context.Context, dest any, q db.Query, args ...a
 func (p *pg) ExecContext(ctx context.Context, q db.Query, args ...any) (pgconn.CommandTag, error) {
 	logQuery(ctx, q, args...)
 
+	tx, ok := ctx.Value(TxKey).(pgx.Tx)
+	if ok {
+		return tx.Exec(ctx, q.QueryRaw, args...)
+	}
+
 	return p.dbc.Exec(ctx, q.QueryRaw, args...)
 }
 
 func (p *pg) QueryContext(ctx context.Context, q db.Query, args ...any) (pgx.Rows, error) {
 	logQuery(ctx, q, args...)
+
+	tx, ok := ctx.Value(TxKey).(pgx.Tx)
+	if ok {
+		return tx.Query(ctx, q.QueryRaw, args...)
+	}
 
 	return p.dbc.Query(ctx, q.QueryRaw, args...)
 }
@@ -60,7 +76,16 @@ func (p *pg) QueryContext(ctx context.Context, q db.Query, args ...any) (pgx.Row
 func (p *pg) QueryRowContext(ctx context.Context, q db.Query, args ...any) pgx.Row {
 	logQuery(ctx, q, args...)
 
+	tx, ok := ctx.Value(TxKey).(pgx.Tx)
+	if ok {
+		return tx.QueryRow(ctx, q.QueryRaw, args...)
+	}
+
 	return p.dbc.QueryRow(ctx, q.QueryRaw, args...)
+}
+
+func (p *pg) BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.Tx, error) {
+	return p.dbc.BeginTx(ctx, opts)
 }
 
 func (p *pg) Ping(ctx context.Context) error {
@@ -75,4 +100,8 @@ func logQuery(ctx context.Context, q db.Query, args ...any) {
 	prettyQuery := prettier.Pretty(q.QueryRaw, prettier.PlaceholderDollar, args...)
 	log.Println(ctx, fmt.Sprintf("%s", q.Name))
 	log.Println(ctx, fmt.Sprintf("%s", prettyQuery))
+}
+
+func MakeContextTx(ctx context.Context, tx pgx.Tx) context.Context {
+	return context.WithValue(ctx, TxKey, tx)
 }

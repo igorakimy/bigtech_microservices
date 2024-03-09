@@ -18,7 +18,7 @@ func New(ctx context.Context, dsn string) (db.Client, error) {
 	}
 
 	return &pgClient{
-		masterDBC: &pg{dbc: dbc},
+		masterDBC: NewDB(dbc),
 	}, nil
 }
 
