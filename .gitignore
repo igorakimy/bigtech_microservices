@@ -2,3 +2,4 @@
 .vscode/
 .env
 grpc/bin/
+grpc/coverage.out
