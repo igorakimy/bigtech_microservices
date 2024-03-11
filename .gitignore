@@ -3,3 +3,4 @@
 .env
 grpc/bin/
 grpc/coverage.out
+grpc/vendor.protogen

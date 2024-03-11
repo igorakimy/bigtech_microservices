@@ -11,19 +11,23 @@ install-deps:
 	GOBIN=$(LOCAL_BIN) go install -mod=mod google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
 	GOBIN=$(LOCAL_BIN) go install github.com/pressly/goose/v3/cmd/goose@v3.18.0
 	GOBIN=$(LOCAL_BIN) go install github.com/gojuno/minimock/v3/cmd/minimock@v3.3.6
+	GOBIN=$(LOCAL_BIN) go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.19.1
 
 generate:
 	make generate-note-api
 
 generate-note-api:
 	mkdir -p pkg/note/v1
-	protoc --proto_path api/note/v1 \
+	protoc --proto_path api/note/v1 --proto_path vendor.protogen \
 	--go_out=pkg/note/v1 \
 	--go_opt=paths=source_relative \
 	--plugin=protoc-gen-go=bin/protoc-gen-go \
 	--go-grpc_out=pkg/note/v1 \
 	--go-grpc_opt=paths=source_relative \
 	--plugin=protoc-gen-go-grpc=bin/protoc-gen-go-grpc \
+	--grpc-gateway_out=pkg/note/v1 \
+	--grpc-gateway_opt=paths=source_relative \
+	--plugin=protoc-gen-grpc-gateway=bin/protoc-gen-grpc-gateway \
 	api/note/v1/note.proto
 
 # Собрать приложение под конкретную архитектуру и ОС
@@ -72,3 +76,11 @@ test-coverage:
 	go tool cover -html=coverage.out;
 	go tool cover -func=./coverage.out | grep "total";
 	grep -sqFx "/coverage.out" .gitignore || echo "/coverage.out" >> .gitignore
+
+vendor-proto:
+	@if [ ! -d vendor.protogen/google ]; then \
+  		git clone https://github.com/googleapis/googleapis vendor.protogen/googleapis &&\
+  		mkdir -p vendor.protogen/google/ &&\
+  		mv vendor.protogen/googleapis/google/api vendor.protogen/google &&\
+  		rm -rf vendor.protogen/googleapis ;\
+  	fi
