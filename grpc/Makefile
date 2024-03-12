@@ -12,10 +12,12 @@ install-deps:
 	GOBIN=$(LOCAL_BIN) go install github.com/pressly/goose/v3/cmd/goose@v3.18.0
 	GOBIN=$(LOCAL_BIN) go install github.com/gojuno/minimock/v3/cmd/minimock@v3.3.6
 	GOBIN=$(LOCAL_BIN) go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.19.1
+	GOBIN=$(LOCAL_BIN) go install github.com/envoyproxy/protoc-gen-validate@v0.10.1
 
 generate:
 	make generate-note-api
 
+# Сгенерировать код из proto-файлов
 generate-note-api:
 	mkdir -p pkg/note/v1
 	protoc --proto_path api/note/v1 --proto_path vendor.protogen \
@@ -28,6 +30,9 @@ generate-note-api:
 	--grpc-gateway_out=pkg/note/v1 \
 	--grpc-gateway_opt=paths=source_relative \
 	--plugin=protoc-gen-grpc-gateway=bin/protoc-gen-grpc-gateway \
+	--validate_out lang=go:pkg/note/v1 \
+	--validate_opt=paths=source_relative \
+	--plugin=protoc-gen-validate=bin/protoc-gen-validate \
 	api/note/v1/note.proto
 
 # Собрать приложение под конкретную архитектуру и ОС
@@ -78,6 +83,12 @@ test-coverage:
 	grep -sqFx "/coverage.out" .gitignore || echo "/coverage.out" >> .gitignore
 
 vendor-proto:
+	@if [ ! -d vendor.protogen/validate ]; then \
+  		mkdir -p vendor.protogen/validate &&\
+  		git clone https://github.com/envoyproxy/protoc-gen-validate vendor.protogen/protoc-gen-validate &&\
+  		mv vendor.protogen/protoc-gen-validate/validate/*.proto vendor.protogen/validate && \
+  		rm -rf vendor.protogen/protoc-gen-validate ;\
+  	fi
 	@if [ ! -d vendor.protogen/google ]; then \
   		git clone https://github.com/googleapis/googleapis vendor.protogen/googleapis &&\
   		mkdir -p vendor.protogen/google/ &&\

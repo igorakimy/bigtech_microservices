@@ -6,6 +6,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/igorakimy/bigtech_microservices/internal/closer"
 	"github.com/igorakimy/bigtech_microservices/internal/config"
+	"github.com/igorakimy/bigtech_microservices/internal/interceptor"
 	desc "github.com/igorakimy/bigtech_microservices/pkg/note/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -98,7 +99,11 @@ func (a *App) initServiceProvider(_ context.Context) error {
 }
 
 func (a *App) initGRPCServer(ctx context.Context) error {
-	a.grpcServer = grpc.NewServer(grpc.Creds(insecure.NewCredentials()))
+	a.grpcServer = grpc.NewServer(
+		grpc.Creds(insecure.NewCredentials()),
+		grpc.UnaryInterceptor(interceptor.ValidateInterceptor),
+	)
+
 	reflection.Register(a.grpcServer)
 
 	desc.RegisterNoteV1Server(
