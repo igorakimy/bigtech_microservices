@@ -5,17 +5,21 @@ LOCAL_BIN:=$(CURDIR)/bin
 LOCAL_MIGRATION_DIR=$(MIGRATION_DIR)
 LOCAL_MIGRATION_DSN="host=$(POSTGRES_HOST) port=$(POSTGRES_PORT) dbname=$(POSTGRES_DBNAME) user=$(POSTGRES_USER) password=$(POSTGRES_PASSWORD) sslmode=disable"
 
-install-deps:
 # Скачать бинарники локально (фиксация версий обязательна)
+install-deps:
 	GOBIN=$(LOCAL_BIN) go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.1
 	GOBIN=$(LOCAL_BIN) go install -mod=mod google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
 	GOBIN=$(LOCAL_BIN) go install github.com/pressly/goose/v3/cmd/goose@v3.18.0
 	GOBIN=$(LOCAL_BIN) go install github.com/gojuno/minimock/v3/cmd/minimock@v3.3.6
 	GOBIN=$(LOCAL_BIN) go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.19.1
+	GOBIN=$(LOCAL_BIN) go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@v2.19.1
+	GOBIN=$(LOCAL_BIN) go install github.com/rakyll/statik@v0.1.7
 	GOBIN=$(LOCAL_BIN) go install github.com/envoyproxy/protoc-gen-validate@v0.10.1
 
 generate:
+	mkdir -p pkg/swagger
 	make generate-note-api
+	$(LOCAL_BIN)/statik -f -src=pkg/swagger/ -include='*.json,*.png,*.html,*.css,*.js'
 
 # Сгенерировать код из proto-файлов
 generate-note-api:
@@ -30,6 +34,8 @@ generate-note-api:
 	--grpc-gateway_out=pkg/note/v1 \
 	--grpc-gateway_opt=paths=source_relative \
 	--plugin=protoc-gen-grpc-gateway=bin/protoc-gen-grpc-gateway \
+	--openapiv2_out=allow_merge=true,merge_file_name=api:pkg/swagger \
+	--plugin=protoc-gen-openapiv2=bin/protoc-gen-openapiv2 \
 	--validate_out lang=go:pkg/note/v1 \
 	--validate_opt=paths=source_relative \
 	--plugin=protoc-gen-validate=bin/protoc-gen-validate \
@@ -82,6 +88,7 @@ test-coverage:
 	go tool cover -func=./coverage.out | grep "total";
 	grep -sqFx "/coverage.out" .gitignore || echo "/coverage.out" >> .gitignore
 
+# Скачать недостающие сторонние proto-файлы
 vendor-proto:
 	@if [ ! -d vendor.protogen/validate ]; then \
   		mkdir -p vendor.protogen/validate &&\
@@ -95,3 +102,9 @@ vendor-proto:
   		mv vendor.protogen/googleapis/google/api vendor.protogen/google &&\
   		rm -rf vendor.protogen/googleapis ;\
   	fi
+	@if [ ! -d vendor.protogen/protoc-gen-openapiv2 ]; then \
+		mkdir -p vendor.protogen/protoc-gen-openapiv2/options &&\
+		git clone https://github.com/grpc-ecosystem/grpc-gateway vendor.protogen/openapiv2 &&\
+		mv vendor.protogen/openapiv2/protoc-gen-openapiv2/options/*.proto vendor.protogen/protoc-gen-openapiv2/options &&\
+		rm -rf vendor.protogen/openapiv2 ;\
+	fi

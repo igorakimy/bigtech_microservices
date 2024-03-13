@@ -20,6 +20,7 @@ type serviceProvider struct {
 	postgresConfig config.PostgresConfig
 	grpcConfig     config.GRPCConfig
 	httpConfig     config.HTTPConfig
+	swaggerConfig  config.SwaggerConfig
 
 	dbClient  db.Client
 	txManager db.TxManager
@@ -68,6 +69,18 @@ func (s *serviceProvider) HTTPConfig() config.HTTPConfig {
 	}
 
 	return s.httpConfig
+}
+
+func (s *serviceProvider) SwaggerConfig() config.SwaggerConfig {
+	if s.swaggerConfig == nil {
+		swaggerConfig, err := env.NewSwaggerConfig()
+		if err != nil {
+			log.Fatalf("failed to get swagger congig: %s", err.Error())
+		}
+		s.swaggerConfig = swaggerConfig
+	}
+
+	return s.swaggerConfig
 }
 
 func (s *serviceProvider) DbClient(ctx context.Context) db.Client {

@@ -47,8 +47,7 @@ func (r *PostgresRepository) Get(ctx context.Context, id int64) (*model.Note, er
 	}
 
 	var n modelRepo.Note
-	err = r.db.DB().ScanOneContext(ctx, &n, q, args...)
-	if err != nil {
+	if err = r.db.DB().ScanOneContext(ctx, &n, q, args...); err != nil {
 		return nil, err
 	}
 
@@ -71,9 +70,7 @@ func (r *PostgresRepository) List(ctx context.Context) ([]model.Note, error) {
 	}
 
 	var notes []modelRepo.Note
-
-	err = r.db.DB().ScanAllContext(ctx, &notes, q, args...)
-	if err != nil {
+	if err = r.db.DB().ScanAllContext(ctx, &notes, q, args...); err != nil {
 		return nil, err
 	}
 
@@ -98,8 +95,8 @@ func (r *PostgresRepository) Create(ctx context.Context, info *model.NoteInfo) (
 	}
 
 	var noteID int64
-	err = r.db.DB().ScanOneContext(ctx, &noteID, q, args...)
-	if err != nil {
+
+	if err = r.db.DB().ScanOneContext(ctx, &noteID, q, args...); err != nil {
 		return 0, err
 	}
 
