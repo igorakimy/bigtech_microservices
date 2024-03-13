@@ -4,20 +4,25 @@ import (
 	"context"
 	desc "github.com/igorakimy/bigtech_microservices/pkg/note/v1"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
 	"log"
 	"time"
 )
 
 const (
 	address = "localhost:50051"
-	noteID  = 12
+	noteID  = 42
 )
 
 func main() {
+	creds, err := credentials.NewClientTLSFromFile("service.pem", "")
+	if err != nil {
+		log.Fatalf("could not process the credentials: %v", err)
+	}
+
 	conn, err := grpc.Dial(
 		address,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithTransportCredentials(creds),
 	)
 	if err != nil {
 		log.Fatalf("failed to connect to server: %v", err)

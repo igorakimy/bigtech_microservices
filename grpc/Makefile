@@ -16,13 +16,13 @@ install-deps:
 	GOBIN=$(LOCAL_BIN) go install github.com/rakyll/statik@v0.1.7
 	GOBIN=$(LOCAL_BIN) go install github.com/envoyproxy/protoc-gen-validate@v0.10.1
 
-generate:
+gen:
 	mkdir -p pkg/swagger
 	make generate-note-api
 	$(LOCAL_BIN)/statik -f -src=pkg/swagger/ -include='*.json,*.png,*.html,*.css,*.js'
 
 # Сгенерировать код из proto-файлов
-generate-note-api:
+gen-note-api:
 	mkdir -p pkg/note/v1
 	protoc --proto_path api/note/v1 --proto_path vendor.protogen \
 	--go_out=pkg/note/v1 \
@@ -65,13 +65,13 @@ local-migration-down:
 	${LOCAL_BIN}/goose -dir ${LOCAL_MIGRATION_DIR} postgres ${LOCAL_MIGRATION_DSN} down -v
 
 # Сгенерировать моки для тестов
-generate-mocks:
+gen-mocks:
 	make generate-repo-mocks generate-service-mocks
 
-generate-repo-mocks:
+gen-repo-mocks:
 	go generate ./internal/repository
 
-generate-service-mocks:
+gen-service-mocks:
 	go generate ./internal/service
 
 # Запустить тесты с просмотром покрытия
@@ -108,3 +108,11 @@ vendor-proto:
 		mv vendor.protogen/openapiv2/protoc-gen-openapiv2/options/*.proto vendor.protogen/protoc-gen-openapiv2/options &&\
 		rm -rf vendor.protogen/openapiv2 ;\
 	fi
+
+# Сгенерировать сертификаты для TLS
+gen-cert:
+	openssl genrsa -out ca.key 4096
+	openssl req -new -x509 -key ca.key -sha256 -subj "/C=US/ST=NJ/O=CA, Inc." -days 365 -out ca.cert
+	openssl genrsa -out service.key 4096
+	openssl req -new -key service.key -out service.csr -config certificate.conf
+	openssl x509 -req -in service.csr -CA ca.cert -CAkey ca.key -CAcreateserial -out service.pem -days 365 -sha256 -extfile certificate.conf -extensions req_ext
